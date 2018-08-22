@@ -1,6 +1,6 @@
 registrator:
   restart: always
-  image: ena/aardvark:latest
+  image: myena/aardvark:latest
   command: -asn 65000 -network weave,my-awesome-network -peer rt-reflector-01.domain.tld,rt-reflector-02.domain.tld
   net: "host"
   volumes:

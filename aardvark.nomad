@@ -18,7 +18,7 @@ job "aardvark" {
       driver = "docker"
       config {
         network_mode = "host"
-        image = "ena/aardvark:latest"
+        image = "myena/aardvark:latest"
         args = [
           "-asn", 65000,
           "-network", "weave, my-awesome-network",
