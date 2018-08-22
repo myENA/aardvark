@@ -1,0 +1,23 @@
+language: go
+
+go:
+  - 1.10.x
+  - 1.9.x
+
+branches:
+  only:
+    - master
+
+sudo: false
+dist: trusty
+
+env:
+  - INSTALL_DIRECTORY=$HOME/bin
+
+install:
+  - mkdir -p $HOME/bin
+  - export PATH="$HOME/bin:$PATH"
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+
+script:
+  - make build check test
