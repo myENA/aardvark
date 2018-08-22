@@ -1,0 +1,9 @@
+.DS_*
+.Apple*
+.vimrc
+.idea
+*.iml
+.*~
+?
+vendor/
+aardvark
