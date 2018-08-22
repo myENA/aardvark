@@ -1,7 +1,6 @@
 [![Mozilla Public License](https://img.shields.io/badge/license-MPL-blue.svg)](https://www.mozilla.org/MPL)
 [![Go Report Card](https://goreportcard.com/badge/github.com/myENA/aardvark)](https://goreportcard.com/report/github.com/myENA/aardvark)
 [![Build Status](https://travis-ci.org/myENA/aardvark.svg?branch=master)](https://travis-ci.org/myENA/aardvark)
-[![Downloads](https://img.shields.io/github/downloads/myENA/aardvark/total.svg)](https://github.com/myENA/aardvark/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/myena/aardvark.svg)](https://hub.docker.com/r/myena/aardvark)
 [![Docker Automated Build](https://img.shields.io/docker/automated/myena/aardvark.svg)](https://hub.docker.com/r/myena/aardvark)
 
