@@ -50,7 +50,7 @@ func parseFlags(args []string) error {
 	// declare flags
 	cmdFlags.StringVar(&routeIDFlag, "id", "{{ GetPrivateIP }}",
 		"local router ID (IP address) or go-sockaddr template")
-	cmdFlags.UintVar(&routeASNFlag, "asn", 65321,
+	cmdFlags.UintVar(&routeASNFlag, "asn", 65123,
 		"local and remote peer ASN")
 	cmdFlags.StringVar(&routePeerFlag, "peer", "",
 		"upstream BGP peer(s) in CSV format")

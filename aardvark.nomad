@@ -20,17 +20,13 @@ job "aardvark" {
         network_mode = "host"
         image = "myena/aardvark:latest"
         args = [
-          "-asn", 65000,
+          "-asn", 65123,
           "-network", "weave, my-awesome-network",
-          "-peer", "rt-reflector-01.domain.tld, rt-reflector-02.domain.tld"
+          "-peer", "bgp01.domain.tld, bgp02.domain.tld"
         ]
         volumes = [
           "/var/run/docker.sock:/tmp/docker.sock"
         ]
-      }
-      resources {
-        cpu    = 100
-        memory = 16
       }
     }
   }
