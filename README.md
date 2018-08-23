@@ -1,4 +1,4 @@
-# ![aardvark](https://openclipart.org/image/150px/svg_to_png/23150/papapishu-Aardvark.png") aardvark
+# ![aardvark](https://openclipart.org/image/150px/svg_to_png/23150/papapishu-Aardvark.png) aardvark
 
 [![Mozilla Public License](https://img.shields.io/badge/license-MPL-blue.svg)](https://www.mozilla.org/MPL)
 [![Go Report Card](https://goreportcard.com/badge/github.com/myENA/aardvark)](https://goreportcard.com/report/github.com/myENA/aardvark)
