@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -10,6 +12,8 @@ import (
 	gobgp "github.com/osrg/gobgp/server"
 	"github.com/osrg/gobgp/table"
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 // package globals
@@ -135,6 +139,7 @@ func routeAdd(id string) error {
 		}).Debugf("network not matched")
 		return nil /// nothing to do here
 	}
+
 	// validate container ip info
 	if ci.Network.IPAddress == "" || ci.Network.IPPrefixLen == 0 {
 		log.WithFields(log.Fields{
@@ -176,6 +181,19 @@ func routeAdd(id string) error {
 		"containerName": ci.Name,
 		"containerIP":   ci.Network.IPAddress,
 	}).Infof("added route")
+
+	// replace default container route if specified
+	if config.dockerDefaultRoute != nil {
+		if err = dockerReplaceDefaultRoute(container); err != nil {
+			log.WithFields(log.Fields{
+				"topic":         "event",
+				"containerID":   ci.ID,
+				"containerName": ci.Name,
+				"containerIP":   ci.Network.IPAddress,
+				"error":         err,
+			}).Error("failed to replace route")
+		}
+	}
 
 	// all okay
 	return nil
@@ -219,5 +237,65 @@ func routeDelete(id string) error {
 	}).Infof("deleted route")
 
 	// all okay
+	return nil
+}
+
+func dockerReplaceDefaultRoute(container *dc.Container) error {
+	var nl *netlink.Handle                   // netlink handle
+	var containerNs, originNs netns.NsHandle // netns handles
+	var err error                            // error holder
+
+	// lock os thread to prevent switching namespaces and release when done
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	// get current ns
+	if originNs, err = netns.Get(); err != nil {
+		return err
+	}
+
+	// debugging
+	log.WithFields(log.Fields{
+		"topic":     "docker",
+		"currentNs": originNs.String(),
+	}).Debug("got current namespace")
+
+	// get container namespace
+	if containerNs, err = netns.GetFromPath(
+		fmt.Sprintf("/tmp/proc/%d/ns/net",
+			container.State.Pid)); err != nil {
+		return err
+	}
+
+	// debugging
+	log.WithFields(log.Fields{
+		"topic":         "docker",
+		"containerID":   container.ID,
+		"containerName": container.Name,
+		"containerNs":   containerNs.String(),
+	}).Debug("got container namespace")
+
+	// get netlink handle
+	if nl, err = netlink.NewHandleAtFrom(containerNs, originNs); err != nil {
+		return err
+	}
+
+	// attempt to replace route
+	if err = nl.RouteReplace(&netlink.Route{
+		Dst: nil,
+		Gw:  config.dockerDefaultRoute,
+	}); err != nil {
+		return err
+	}
+
+	// log update
+	log.WithFields(log.Fields{
+		"topic":         "docker",
+		"containerID":   container.ID,
+		"containerName": container.Name,
+		"defaultRoute":  config.dockerDefaultRoute.String(),
+	}).Infof("updated default route")
+
+	// all good
 	return nil
 }

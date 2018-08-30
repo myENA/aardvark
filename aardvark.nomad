@@ -17,15 +17,21 @@ job "aardvark" {
     task "aardvark" {
       driver = "docker"
       config {
-        network_mode = "host"
         image = "myena/aardvark:latest"
+        network_mode = "host"
         args = [
           "-asn", 65123,
           "-network", "weave, my-awesome-network",
-          "-peer", "bgp01.domain.tld, bgp02.domain.tld"
+          "-peer", "bgp01.domain.tld, bgp02.domain.tld",
+          "-defaultRoute", "{{ GetInterfaceIP \"weave\" }}"
+        ]
+        cap_add = [
+          "NET_ADMIN",
+          "SYS_ADMIN"
         ]
         volumes = [
-          "/var/run/docker.sock:/tmp/docker.sock"
+          "/var/run/docker.sock:/tmp/docker.sock",
+          "/proc:/tmp/proc"
         ]
       }
     }

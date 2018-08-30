@@ -422,6 +422,8 @@
     "github.com/osrg/gobgp/server",
     "github.com/osrg/gobgp/table",
     "github.com/sirupsen/logrus",
+    "github.com/vishvananda/netlink",
+    "github.com/vishvananda/netns",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

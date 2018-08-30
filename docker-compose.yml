@@ -1,7 +1,11 @@
 registrator:
   restart: always
   image: myena/aardvark:latest
-  command: -asn 65123 -network weave,my-awesome-network -peer bgp01.domain.tld,bgp02.domain.tld
   net: "host"
+  command: -asn 65123 -network weave,my-awesome-network -peer bgp01.domain.tld,bgp02.domain.tld
+  cap_add:
+    - NET_ADMIN
+    - SYS_ADMIN
   volumes:
-    -  /var/run/docker.sock:/tmp/docker.sock
+    - /var/run/docker.sock:/tmp/docker.sock
+    - /proc:/tmp/proc

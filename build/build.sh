@@ -2,7 +2,7 @@
 #
 ## package declarations
 BUILD_NAME="aardvark"
-RELEASE_VERSION="0.1"
+RELEASE_VERSION="0.2"
 
 ## simple usage example
 showUsage() {
@@ -60,7 +60,7 @@ dep ensure > /dev/null 2>&1
 printf "Building ... "
 
 ## build it
-CGO_ENABLED=0 go build -o "${BUILD_NAME}" \
+go build -o "${BUILD_NAME}" \
 -ldflags="-X main.appVersion=${RELEASE_VERSION} -s -w" > /dev/null
 
 ## go build return
