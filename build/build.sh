@@ -2,7 +2,7 @@
 #
 ## package declarations
 BUILD_NAME="aardvark"
-RELEASE_VERSION="0.2"
+RELEASE_VERSION="0.3"
 
 ## simple usage example
 showUsage() {
