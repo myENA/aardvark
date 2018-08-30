@@ -71,16 +71,20 @@ In other words, we do not want the container to NAT through the host.  The curre
 automatically adds `MASQUERADE` rules to the system.  We work-around this with the following script.
 
 ```bash
-#!/bin/sh
+#!/usr/bin/env bash
 
-## collect data
-MGMT_IFACE="eth0"
-EXPOSE_NET=10.156.8
-EXPOSE_END=$(ip addr show dev ${MGMT_IFACE} | awk -F ' *|/' '/inet /{split($3,a,".");print a[4]}')
-EXPOSE_MASK=22
+## settings
+MGMT_IF="eth0"
+DOCKER_NETWORK="app"
+
+## get last octet of first management interface address
+LAST_OCTET=$(ip addr show dev ${MGMT_IF} | awk -F ' *|/' '/inet /{split($3,a,".");print a[4]}' | head -1)
+
+## get weave network subnet from docker
+WEAVE_NET=$(docker network inspect ${DOCKER_NETWORK} -f '{{with $conf := index .IPAM.Config 0}}{{$conf.Subnet}}{{end}}')
 
 ## expose network
-weave expose ${EXPOSE_NET}.${EXPOSE_END}/${EXPOSE_MASK}
+weave expose $(awk -v last=${LAST_OCTET} -F '/' '{split($1,a,".");print a[1] "." a[2] "." a[3] "." last "/" $2}' <<< ${WEAVE_NET})
 
 ## cleanup rules
 for rule in $(iptables -t nat -L WEAVE --line-numbers | awk '/MASQUERADE /{print $1}' | sort -rn); do
