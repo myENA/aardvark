@@ -18,6 +18,9 @@ socket.  See the included [docker-compose.yml](docker-compose.yml) and [aardvark
 examples.  The expanded capabilities and `/proc` mount are only required if you want to use the defautl route
 replacement functionality.
 
+While this was built against a weave deployment, there shouldn't be anything inherently weave specific about the
+application besides the example script in the usage section below.
+
 ## Building/Installing
 
 ```
@@ -75,13 +78,13 @@ automatically adds `MASQUERADE` rules to the system.  We work-around this with t
 
 ## settings
 MGMT_IF="eth0"
-DOCKER_NETWORK="app"
+DOCKER_NET="app"
 
 ## get last octet of first management interface address
 LAST_OCTET=$(ip addr show dev ${MGMT_IF} | awk -F ' *|/' '/inet /{split($3,a,".");print a[4]}' | head -1)
 
 ## get weave network subnet from docker
-WEAVE_NET=$(docker network inspect ${DOCKER_NETWORK} -f '{{with $conf := index .IPAM.Config 0}}{{$conf.Subnet}}{{end}}')
+WEAVE_NET=$(docker network inspect ${DOCKER_NET} -f '{{with $conf := index .IPAM.Config 0}}{{$conf.Subnet}}{{end}}')
 
 ## expose network
 weave expose $(awk -v last=${LAST_OCTET} -F '/' '{split($1,a,".");print a[1] "." a[2] "." a[3] "." last "/" $2}' <<< ${WEAVE_NET})
