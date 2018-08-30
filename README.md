@@ -95,8 +95,8 @@ for rule in $(iptables -t nat -L WEAVE --line-numbers | awk '/MASQUERADE /{print
 done
 ```
 
-This is run on startup via a systemd job and takes care of exposing the weave network (`EXPOSE_NET`) using
-the last octec of the system's management interface (`MGMT_IFACE`) to complete the exposed address.
-This in combination with aardvark running with a `-defaultRoute "{{ GetInterfaceIP \"weave\" }}"` option allows our
+This is run on startup via a systemd job and takes care of exposing the docker network (`DOCKER_NET`) via weave
+using the last octec of the system's management interface (`MGMT_IFACE`) to complete the exposed address.
+This in combination with aardvark running with `-defaultRoute "{{ GetInterfaceIP \"weave\" }}"` allows our
 containerized applications running in a weave network to be first-class network citizens.
  
