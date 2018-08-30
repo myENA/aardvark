@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"errors"
@@ -11,17 +11,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// appConfig represents application configuration
-type appConfig struct {
-	routeID            string   // local router ID
-	routeASN           uint32   // local and upstream ASN
-	routePeer          []string // upstream BGP peer(s)
-	dockerNetwork      []string // names of watched docker network(s)
-	dockerDefaultRoute net.IP   // default route within container
+// Config represents application configuration
+type Config struct {
+	RouteID            string   // local router ID
+	RouteASN           uint32   // local and upstream ASN
+	RoutePeer          []string // upstream BGP peer(s)
+	DockerNetwork      []string // names of watched docker network(s)
+	DockerDefaultRoute net.IP   // default route within container
 }
-
-// config is a global instance of the application configuration
-var config *appConfig
 
 // csv2StringSlice converts comma separated values into a string slice
 func csv2StringSlice(s string) []string {
@@ -32,8 +29,9 @@ func csv2StringSlice(s string) []string {
 	return res
 }
 
-// parseFlags parses command line arguments and populates the application configuration
-func parseFlags(args []string) error {
+// ParseFlags parses command line arguments and populates the application configuration
+func ParseFlags(args []string) (*Config, error) {
+	var config *Config                // returned config
 	var cmdFlags *flag.FlagSet        // app flagset
 	var routeIDFlag string            // raw un-processed router ID or go-sockaddr template
 	var routeASNFlag uint             // un-cast input
@@ -45,11 +43,11 @@ func parseFlags(args []string) error {
 
 	// init config if needed
 	if config == nil {
-		config = new(appConfig)
+		config = new(Config)
 	}
 
 	// init flagset
-	cmdFlags = flag.NewFlagSet(appName, flag.ExitOnError)
+	cmdFlags = flag.NewFlagSet("aardvark", flag.ExitOnError)
 
 	// declare flags
 	cmdFlags.BoolVar(&logPlainFlag, "text", false,
@@ -67,7 +65,7 @@ func parseFlags(args []string) error {
 
 	// parse flags
 	if err = cmdFlags.Parse(args); err != nil {
-		return err
+		return nil, err
 	}
 
 	// set log format
@@ -81,36 +79,36 @@ func parseFlags(args []string) error {
 
 	// check for remaining garbage
 	if cmdFlags.NArg() > 0 {
-		return errors.New("unknown non-flag argument(s) present")
+		return nil, errors.New("unknown non-flag argument(s) present")
 	}
 
 	// process route ID flag
-	if config.routeID, err = template.Parse(routeIDFlag); err != nil {
-		return err
+	if config.RouteID, err = template.Parse(routeIDFlag); err != nil {
+		return nil, err
 	}
 
 	// cast route asn
-	config.routeASN = uint32(routeASNFlag)
+	config.RouteASN = uint32(routeASNFlag)
 
 	// process csv flags
-	config.routePeer = csv2StringSlice(routePeerFlag)
-	config.dockerNetwork = csv2StringSlice(dockerNetworkFlag)
+	config.RoutePeer = csv2StringSlice(routePeerFlag)
+	config.DockerNetwork = csv2StringSlice(dockerNetworkFlag)
 
 	// process route ID flag
 	if dockerDefaultRouteFlag != "" {
 		var temps string // parsed template
 		// process template
 		if temps, err = template.Parse(dockerDefaultRouteFlag); err != nil {
-			return err
+			return nil, err
 		}
 		// parse resulting ip
-		config.dockerDefaultRoute = net.ParseIP(temps)
+		config.DockerDefaultRoute = net.ParseIP(temps)
 		// check parse
-		if config.dockerDefaultRoute == nil {
-			return fmt.Errorf("failed to parse default route: %s", temps)
+		if config.DockerDefaultRoute == nil {
+			return nil, fmt.Errorf("failed to parse default route: %s", temps)
 		}
 	}
 
 	// all good
-	return nil
+	return config, nil
 }

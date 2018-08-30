@@ -60,8 +60,7 @@ dep ensure > /dev/null 2>&1
 printf "Building ... "
 
 ## build it
-go build -o "${BUILD_NAME}" \
--ldflags="-X main.appVersion=${RELEASE_VERSION} -s -w" > /dev/null
+go build -o "${BUILD_NAME}" -ldflags="-s -w" > /dev/null
 
 ## go build return
 RETVAL=$?

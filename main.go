@@ -3,18 +3,22 @@ package main
 import (
 	"os"
 
+	"github.com/myENA/aardvark/pkg/config"
+	"github.com/myENA/aardvark/pkg/docker"
+	"github.com/myENA/aardvark/pkg/route"
 	log "github.com/sirupsen/logrus"
 )
 
 // appMain performs application initialization and returns and exit code
 func appMain() int {
-	var err error // general error holder
+	var appConfig *config.Config // application config
+	var err error                // general error holder
 
 	// set log level and formatter
 	log.SetLevel(log.DebugLevel)
 
 	// process flags
-	if err = parseFlags(os.Args[1:]); err != nil {
+	if appConfig, err = config.ParseFlags(os.Args[1:]); err != nil {
 		log.WithFields(log.Fields{
 			"component": "setup",
 			"error":     err,
@@ -23,7 +27,7 @@ func appMain() int {
 	}
 
 	// setup docker client
-	if err = dockerSetup(); err != nil {
+	if err = docker.Setup(); err != nil {
 		log.WithFields(log.Fields{
 			"component": "setup",
 			"error":     err,
@@ -32,7 +36,7 @@ func appMain() int {
 	}
 
 	// setup route engine
-	if err = routeSetup(); err != nil {
+	if err = route.Setup(appConfig); err != nil {
 		log.WithFields(log.Fields{
 			"component": "setup",
 			"error":     err,
@@ -41,7 +45,7 @@ func appMain() int {
 	}
 
 	// perform initial route sync
-	if err = routeSync(); err != nil {
+	if err = docker.Sync(); err != nil {
 		log.WithFields(log.Fields{
 			"topic": "setup",
 			"error": err,
@@ -49,16 +53,18 @@ func appMain() int {
 		return 1
 	}
 
-	// start listener
-	if err = dockerListen(); err != nil {
+	// spawn event handler and wait ...
+	if err = docker.Handler(); err != nil {
 		log.WithFields(log.Fields{
 			"topic": "docker",
 			"error": err,
-		}).Error("failed to start event listener")
+		}).Error("event handler failed")
+		// all done
+		return 1
 	}
 
-	// spawn event handler and wait ...
-	return dockerEventHandler()
+	// exit clean
+	return 0
 }
 
 // the main function that exits on completion

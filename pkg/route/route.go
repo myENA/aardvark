@@ -1,4 +1,4 @@
-package main
+package route
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	dc "github.com/fsouza/go-dockerclient"
+	"github.com/myENA/aardvark/pkg/config"
 	bgpConfig "github.com/osrg/gobgp/config"
 	"github.com/osrg/gobgp/packet/bgp"
 	gobgp "github.com/osrg/gobgp/server"
@@ -21,6 +22,7 @@ var (
 	routeMap  = make(map[string]containerInfo)
 	routeLock sync.RWMutex
 	bgpServer *gobgp.BgpServer
+	appConfig *config.Config
 )
 
 // containerInfo contains container routing information
@@ -31,9 +33,12 @@ type containerInfo struct {
 	pathUUID []byte
 }
 
-// routeSetup performs initial route configuration
-func routeSetup() error {
+// Setup performs initial route configuration
+func Setup(conf *config.Config) error {
 	var err error // general error holder
+
+	// copy config
+	appConfig = conf
 
 	// init BGP server
 	bgpServer = gobgp.NewBgpServer()
@@ -42,8 +47,8 @@ func routeSetup() error {
 	// global config
 	if err = bgpServer.Start(&bgpConfig.Global{
 		Config: bgpConfig.GlobalConfig{
-			As:       config.routeASN,
-			RouterId: config.routeID,
+			As:       appConfig.RouteASN,
+			RouterId: appConfig.RouteID,
 			Port:     -1, // don't listed on tcp:179
 		},
 	}); err != nil {
@@ -51,7 +56,7 @@ func routeSetup() error {
 	}
 
 	// loop through and add configured peers
-	for _, pAddr := range config.routePeer {
+	for _, pAddr := range appConfig.RoutePeer {
 		if err = bgpServer.AddNeighbor(&bgpConfig.Neighbor{
 			Config: bgpConfig.NeighborConfig{
 				NeighborAddress: pAddr,
@@ -65,62 +70,19 @@ func routeSetup() error {
 	return nil
 }
 
-// routeSync performs initial route sync
-func routeSync() error {
-	var containers []dc.APIContainers
-	var container dc.APIContainers
-	var err error
-
-	// get all containers
-	if containers, err = dockerClient.ListContainers(dc.ListContainersOptions{}); err != nil {
-		return err
-	}
-
-	// debugging
-	log.WithFields(log.Fields{
-		"topic":     "route",
-		"container": container,
-	}).Debug("route sync")
-
-	// loop through containers
-	for _, container = range containers {
-		if err = routeAdd(container.ID); err != nil {
-			log.WithFields(log.Fields{
-				"topic":       "route",
-				"containerID": container.ID,
-				"error":       err,
-			}).Error("failed to sync")
-		}
-	}
-
-	// all okay
-	return nil
-}
-
-// routeAdd advertises bgp routes for the given container identifier
-func routeAdd(id string) error {
-	var container *dc.Container
+// Add advertises bgp routes for the given container identifier
+func Add(container *dc.Container) error {
 	var ci containerInfo
 	var nn string
 	var ok, matched bool
 	var err error
 
-	// inspect container and check error
-	if container, err = dockerClient.InspectContainer(id); err != nil {
-		log.WithFields(log.Fields{
-			"topic":       "route",
-			"containerID": id,
-			"error":       err,
-		}).Error("docker inspect failed")
-		return err
-	}
-
 	// loop over configured networks
-	for _, nn = range config.dockerNetwork {
+	for _, nn = range appConfig.DockerNetwork {
 		if ci.Network, ok = container.NetworkSettings.Networks[nn]; ok {
 			log.WithFields(log.Fields{
 				"topic":             "route",
-				"containerID":       id,
+				"containerID":       container.ID,
 				"containerName":     container.Name,
 				"containerNetworks": container.NetworkSettings.Networks,
 			}).Debugf("network matched")
@@ -133,7 +95,7 @@ func routeAdd(id string) error {
 	if !matched {
 		log.WithFields(log.Fields{
 			"topic":             "route",
-			"containerID":       id,
+			"containerID":       container.ID,
 			"containerName":     container.Name,
 			"containerNetworks": container.NetworkSettings.Networks,
 		}).Debugf("network not matched")
@@ -144,7 +106,7 @@ func routeAdd(id string) error {
 	if ci.Network.IPAddress == "" || ci.Network.IPPrefixLen == 0 {
 		log.WithFields(log.Fields{
 			"topic":            "route",
-			"containerID":      id,
+			"containerID":      container.ID,
 			"containerName":    container.Name,
 			"containerNetwork": ci.Network,
 		}).Debugf("invalid IPAddress or IPPrefixLen")
@@ -161,7 +123,7 @@ func routeAdd(id string) error {
 			nil, bgp.NewIPAddrPrefix(32, ci.Network.IPAddress),
 			false, []bgp.PathAttributeInterface{
 				bgp.NewPathAttributeOrigin(0),
-				bgp.NewPathAttributeNextHop(config.routeID),
+				bgp.NewPathAttributeNextHop(appConfig.RouteID),
 			},
 			time.Now(), false,
 		)},
@@ -183,8 +145,8 @@ func routeAdd(id string) error {
 	}).Infof("added route")
 
 	// replace default container route if specified
-	if config.dockerDefaultRoute != nil {
-		if err = dockerReplaceDefaultRoute(container); err != nil {
+	if appConfig.DockerDefaultRoute != nil {
+		if err = replaceDefaultRoute(container); err != nil {
 			log.WithFields(log.Fields{
 				"topic":         "event",
 				"containerID":   ci.ID,
@@ -199,8 +161,8 @@ func routeAdd(id string) error {
 	return nil
 }
 
-// routeDelete removes the advertised routes for the given container identifier
-func routeDelete(id string) error {
+// Delete removes the advertised routes for the given container identifier
+func Delete(id string) error {
 	var ci containerInfo
 	var ok bool
 	var err error
@@ -240,7 +202,7 @@ func routeDelete(id string) error {
 	return nil
 }
 
-func dockerReplaceDefaultRoute(container *dc.Container) error {
+func replaceDefaultRoute(container *dc.Container) error {
 	var nl *netlink.Handle                   // netlink handle
 	var containerNs, originNs netns.NsHandle // netns handles
 	var err error                            // error holder
@@ -283,7 +245,7 @@ func dockerReplaceDefaultRoute(container *dc.Container) error {
 	// attempt to replace route
 	if err = nl.RouteReplace(&netlink.Route{
 		Dst: nil,
-		Gw:  config.dockerDefaultRoute,
+		Gw:  appConfig.DockerDefaultRoute,
 	}); err != nil {
 		return err
 	}
@@ -293,7 +255,7 @@ func dockerReplaceDefaultRoute(container *dc.Container) error {
 		"topic":         "docker",
 		"containerID":   container.ID,
 		"containerName": container.Name,
-		"defaultRoute":  config.dockerDefaultRoute.String(),
+		"defaultRoute":  appConfig.DockerDefaultRoute.String(),
 	}).Infof("updated default route")
 
 	// all good
