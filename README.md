@@ -71,7 +71,8 @@ Usage of aardvark:
 
 In our environment we want the containers weave address to be seen by other services on the network.
 In other words, we do not want the container to NAT through the host.  The current `weave expose` functionality
-automatically adds `MASQUERADE` rules to the system.  We work-around this with the following script.
+automatically adds `MASQUERADE` rules to the system.  We work-around this with the following script at
+`/usr/local/sbin/weave-export.sh` ...
 
 ```bash
 #!/usr/bin/env bash
@@ -90,12 +91,25 @@ WEAVE_NET=$(docker network inspect ${DOCKER_NET} -f '{{with $conf := index .IPAM
 weave expose $(awk -v last=${LAST_OCTET} -F '/' '{split($1,a,".");print a[1] "." a[2] "." a[3] "." last "/" $2}' <<< ${WEAVE_NET})
 
 ## cleanup rules
-for rule in $(iptables -t nat -L WEAVE --line-numbers | awk '/MASQUERADE /{print $1}' | sort -rn); do
+for rule in $(iptables -t nat -L WEAVE --line-numbers | awk '/MASQUERADE |RETURN /{print $1}' | sort -rn); do
   iptables -t nat -D WEAVE ${rule}
 done
 ```
 
-This is run on startup via a systemd job and takes care of exposing the docker network (`DOCKER_NET`) via weave
+This is run on startup via a systemd service in `/etc/systemd/system/weave-export.service` ...
+
+```text
+[Unit]
+After=docker.service
+
+[Service]
+ExecStart=/usr/local/sbin/weave-export.sh
+
+[Install]
+WantedBy=default.target
+```
+
+This takes care of exposing the docker network (`DOCKER_NET`) via weave
 using the last octec of the system's management interface (`MGMT_IFACE`) to complete the exposed address.
 This in combination with aardvark running with `-defaultRoute "{{ GetInterfaceIP \"weave\" }}"` allows our
 containerized applications running in a weave network to be first-class network citizens.
