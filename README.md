@@ -72,7 +72,7 @@ Usage of aardvark:
 In our environment we want the containers weave address to be seen by other services on the network.
 In other words, we do not want the container to NAT through the host.  The current `weave expose` functionality
 automatically adds `MASQUERADE` rules to the system.  We work-around this with the following script at
-`/usr/local/sbin/weave-export.sh` ...
+`/usr/local/sbin/weave-export.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -96,7 +96,7 @@ for rule in $(iptables -t nat -L WEAVE --line-numbers | awk '/MASQUERADE |RETURN
 done
 ```
 
-This is run on startup via a systemd service in `/etc/systemd/system/weave-export.service` ...
+This is run on startup via a systemd service in `/etc/systemd/system/weave-export.service`
 
 ```text
 [Unit]
