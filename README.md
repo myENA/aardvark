@@ -81,6 +81,14 @@ automatically adds `MASQUERADE` rules to the system.  We work-around this with t
 MGMT_IF="eth0"
 DOCKER_NET="app"
 
+## ensure proper path
+PATH=/usr/local/bin:/usr/local/sbin:$PATH
+
+## wait for weave to be available
+while [ $(weave status > /dev/null 2>&1; echo $?) -ne 0 ]; do
+  sleep 0.5
+done
+
 ## get last octet of first management interface address
 LAST_OCTET=$(ip addr show dev ${MGMT_IF} | awk -F ' *|/' '/inet /{split($3,a,".");print a[4]}' | head -1)
 
