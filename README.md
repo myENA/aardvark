@@ -8,10 +8,10 @@
 
 ## Summary
 
-Aardvark was built to allow us to expose containers within weave networks via iBGP to
-upstream route reflectors without pulling in more complex networking plugins with features
-we didn't need.  In addition to pushing an iBGP route advertisement aardvark will also optionally
-replace the containers default route to egress out of the `weave` bridge as opposed to the `docker_gwbridge`.
+Aardvark was built to expose containers within weave networks via iBGP to upstream route reflectors
+without pulling in more complex networking plugins with features we didn't need.
+In addition to pushing an iBGP route advertisement aardvark will also optionally replace the containers default
+route to egress out of the `weave` bridge as opposed to the `docker_gwbridge`.
 
 The application is meant to run on every Docker host and have access to the local Docker
 socket.  See the included [docker-compose.yml](docker-compose.yml) and [aardvark.nomad](aardvark.nomad) for
@@ -68,6 +68,9 @@ Usage of aardvark:
 ```
 
 ### Weave without MASQUERADE
+
+> When [#3388](https://github.com/weaveworks/weave/pull/3388) is in a release version
+the below script and process is no longer necessary.
 
 In our environment we want the containers weave address to be seen by other services on the network.
 In other words, we do not want the container to NAT through the host.  The current `weave expose` functionality
